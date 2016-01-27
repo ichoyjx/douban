@@ -50,7 +50,7 @@ def process(online_url, userid):
         urls.append(phtml)
 
     # parallel fetching
-    pool = ThreadPool(16)
+    pool = ThreadPool(4)
     results = pool.map(urllib2.urlopen, urls)
     pool.close()
     pool.join()
