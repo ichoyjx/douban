@@ -24,6 +24,8 @@ sys.setdefaultencoding('utf-8')
 import urllib2
 import re
 from bs4 import BeautifulSoup
+from multiprocessing.dummy import Pool as ThreadPool
+from multiprocessing import cpu_count
 
 def addslash(url):
     if not url.endswith('/'):
@@ -40,18 +42,33 @@ def process(online_url, userid):
         return
 
     # 90 is douban's default
+    urls = []
     for page in range(0, total-1, 90):
         pid = str(page)
         appstr = '?start=%s&sortby=time' % pid
         phtml = addslash(album_url) + appstr
+        urls.append(phtml)
 
-        # print phtml
-        process_each_page(phtml, userid)
+    # parallel fetching
+    pool = ThreadPool(16)
+    results = pool.map(urllib2.urlopen, urls)
+    pool.close()
+    pool.join()
+
+    if len(results) != len(urls):
+        print "FETCH INCOMPLETE"
+        sys.exit(1)
+
+    print "*"*72
+    # process each result page
+    for i, pagesrc in enumerate(results):
+        process_each_page(pagesrc, urls[i], userid)
+
 
 # process each one
-def process_each_page(eachurl, userid):
-    html = eachurl
-    content = urllib2.urlopen(html, timeout=1000).read()
+def process_each_page(pagesrc, eachurl, userid):
+    # html = eachurl
+    content = pagesrc
     soup = BeautifulSoup(content)
     org = soup.find_all(class_='photo_wrap')
 
@@ -122,6 +139,7 @@ def main():
     else:
         file = open('info.txt', 'w')
         file.close()
+        print "*"*72
         process(sys.argv[1], sys.argv[2])
 
 if __name__ == '__main__':
