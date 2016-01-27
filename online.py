@@ -31,7 +31,10 @@ def addslash(url):
     else:
         return url
 
-def process(album_url, userid):
+def process(online_url, userid):
+    album_url = addslash(online_url) + 'album/' + \
+                get_album_id(online_url)
+
     total = int(get_total(album_url))
     if total == 0:
         return
@@ -49,7 +52,7 @@ def process(album_url, userid):
 def process_each_page(eachurl, userid):
     html = eachurl
     content = urllib2.urlopen(html, timeout=1000).read()
-    soup = BeautifulSoup(content, "lxml")
+    soup = BeautifulSoup(content)
     org = soup.find_all(class_='photo_wrap')
 
     file = open('info.txt', 'aw')
@@ -76,7 +79,7 @@ def get_total(album_url):
     html = html + '?start=0&sortby=time'
 
     content = urllib2.urlopen(html, timeout=1000).read()
-    soup = BeautifulSoup(content, "lxml")
+    soup = BeautifulSoup(content)
 
     org = soup.find(class_='count')
     count = 0
@@ -85,6 +88,27 @@ def get_total(album_url):
 
     return count
 
+# get the album id
+def get_album_id(online_url):
+    html = online_url
+    online_id = re.findall(
+        r'\d+', str(online_url))
+    if not online_id or len(online_id) != 1:
+        print "URL error: %s" % online_url
+        sys.exit(0)
+
+    content = urllib2.urlopen(html, timeout=1000).read()
+    soup = BeautifulSoup(content)
+    org = soup.find("a", {"id" : "pho-num"})
+    aid = re.findall(
+        r'\d+', str(org))
+
+    if online_id[0] in aid:
+        return str(aid[aid.index(online_id[0]) + 1])
+    else:
+        print "ERROR"
+        sys.exit(0)
+
 # driver
 def main():
     if len(sys.argv) != 3:
@@ -92,7 +116,7 @@ def main():
         print "Output:"
         print "     - info.txt"
         print "     - page url if userid is found"
-        print "Example: online.py http://www.douban.com/online/11567824/album/105731972 ichoyjx"
+        print "Example: online.py http://www.douban.com/online/11567824/ 50980841"
         print
         sys.exit(0)
     else:
