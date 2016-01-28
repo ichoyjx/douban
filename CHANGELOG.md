@@ -12,6 +12,10 @@ Douban will forbid your IP for a while
 - Use option package
 - Add exception handling
 
+## [1.3.0] - 2016-01-28
+### Changed
+- Point the direct links to images and save the images to local
+
 ## [1.1.6] - 2016-01-28
 ### Changed
 - Add "html.parser" for generic parser
