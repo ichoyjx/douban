@@ -26,6 +26,8 @@ from bs4 import BeautifulSoup
 from multiprocessing.dummy import Pool as ThreadPool
 from multiprocessing import cpu_count
 import time
+import os
+import posixpath
 
 def addslash(url):
     if not url.endswith('/'):
@@ -71,8 +73,8 @@ def process_each_page(online_id, pagesrc, eachurl, userid):
     soup = BeautifulSoup(content, "html.parser")
     org = soup.find_all(class_='photo_wrap')
 
-    # filename = online_id + '/' + online_id + '.txt'
-    file = open(online_id + '.txt', 'aw')
+    filename = get_log_path(online_id)
+    file = open(filename, 'aw')
     file.write('\n' + eachurl + '\n' + '-'*72 + '\n')
 
     uid_set = set()
@@ -162,6 +164,18 @@ def print_user_name(userid):
     name = u''.join(node.findAll(text=True)).encode('utf-8').strip('\n')
     print name + ' '*4 + html + '\n'
 
+def get_wkdir(online_id):
+    wkdir = posixpath.join(os.getcwd(), online_id)
+    if not os.path.exists(wkdir):
+        os.makedirs(wkdir)
+    return wkdir
+
+def get_log_path(online_id):
+    wkdir = get_wkdir(online_id)
+    filename = online_id + '.txt'
+    filepath = posixpath.join(wkdir, filename)
+    return filepath
+
 # driver
 def main():
     if len(sys.argv) != 3:
@@ -178,12 +192,14 @@ def main():
 
         # reset log file
         online_id = get_online_id(url)
-        filename = online_id + '.txt'
-        file = open(filename, 'w')
+        filepath = get_log_path(online_id)
+        file = open(filepath, 'w')
         file.close()
 
         print_user_name(userid)
         process(online_id, userid)
+
+        print "\nImages are saved in %s" % get_wkdir(online_id)
 
 if __name__ == '__main__':
     print
