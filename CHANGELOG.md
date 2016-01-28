@@ -12,6 +12,13 @@ Douban will forbid your IP for a while
 - Use option package
 - Add exception handling
 
+## [1.1.6] - 2016-01-28
+### Changed
+- Add "html.parser" for generic parser
+- Wrap more things into functions and for the actual process,
+online_id is the only we need for the entry
+- Change pool size to 6, save about 30% of elasping time
+
 ## [1.0.6] - 2016-01-27
 ### Changed
 - Removed "lxml" since not every environment has parser installed

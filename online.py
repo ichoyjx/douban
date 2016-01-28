@@ -1,4 +1,3 @@
-#!/usr/bin/python -tt
 #-*-coding:utf-8-*-
 #
 # Author: Brian Yang
@@ -26,6 +25,7 @@ import re
 from bs4 import BeautifulSoup
 from multiprocessing.dummy import Pool as ThreadPool
 from multiprocessing import cpu_count
+import time
 
 def addslash(url):
     if not url.endswith('/'):
@@ -33,9 +33,9 @@ def addslash(url):
     else:
         return url
 
-def process(online_url, userid):
-    album_url = addslash(online_url) + 'album/' + \
-                get_album_id(online_url)
+def process(online_id, userid):
+    online_url = 'http://www.douban.com/online/' + online_id + '/'
+    album_url = online_url + 'album/' + get_album_id(online_id)
 
     total = int(get_total(album_url))
     if total == 0:
@@ -50,7 +50,7 @@ def process(online_url, userid):
         urls.append(phtml)
 
     # parallel fetching
-    pool = ThreadPool(4)
+    pool = ThreadPool(6)
     results = pool.map(urllib2.urlopen, urls)
     pool.close()
     pool.join()
@@ -59,8 +59,7 @@ def process(online_url, userid):
         print "FETCH INCOMPLETE"
         sys.exit(1)
 
-    print "*"*72
-    # process each result page
+     # process each result page
     for i, pagesrc in enumerate(results):
         process_each_page(pagesrc, urls[i], userid)
 
@@ -69,7 +68,7 @@ def process(online_url, userid):
 def process_each_page(pagesrc, eachurl, userid):
     # html = eachurl
     content = pagesrc
-    soup = BeautifulSoup(content)
+    soup = BeautifulSoup(content, "html.parser")
     org = soup.find_all(class_='photo_wrap')
 
     file = open('info.txt', 'aw')
@@ -94,9 +93,7 @@ def process_each_page(pagesrc, eachurl, userid):
 def get_total(album_url):
     html = addslash(album_url)
     html = html + '?start=0&sortby=time'
-
-    content = urllib2.urlopen(html, timeout=1000).read()
-    soup = BeautifulSoup(content)
+    soup = get_single_page(html)
 
     org = soup.find(class_='count')
     count = 0
@@ -106,41 +103,68 @@ def get_total(album_url):
     return count
 
 # get the album id
-def get_album_id(online_url):
+def get_album_id(online_id):
+    online_url = 'http://www.douban.com/online/' + online_id + '/'
     html = online_url
+    soup = get_single_page(html)
+    org = soup.find("a", {"id" : "pho-num"})
+    aid = re.findall(
+        r'\d+', str(org))
+
+    if online_id in aid:
+        return str(aid[aid.index(online_id) + 1])
+    else:
+        print "ERROR"
+        sys.exit(0)
+
+# get online activity id through user's input
+def get_online_id(online_url):
     online_id = re.findall(
         r'\d+', str(online_url))
     if not online_id or len(online_id) != 1:
         print "URL error: %s" % online_url
         sys.exit(0)
 
-    content = urllib2.urlopen(html, timeout=1000).read()
-    soup = BeautifulSoup(content)
-    org = soup.find("a", {"id" : "pho-num"})
-    aid = re.findall(
-        r'\d+', str(org))
+    return str(online_id[0])
 
-    if online_id[0] in aid:
-        return str(aid[aid.index(online_id[0]) + 1])
-    else:
-        print "ERROR"
+# get single page content after bs4
+def get_single_page(html):
+    try:
+        hdr = {'User-Agent': 'Mozilla/5.0'}
+        req = urllib2.Request(html, headers=hdr)
+        content = urllib2.urlopen(req, timeout=1000).read()
+        soup = BeautifulSoup(content, "html.parser")
+    except Exception, e:
+        print "\nRequest Error: %s" % e
         sys.exit(0)
+
+    return soup
 
 # driver
 def main():
     if len(sys.argv) != 3:
-        print "Usage: online.py online_url userid"
+        print "Usage: online.py userid online_url"
         print "Output:"
         print "     - info.txt"
         print "     - page url if userid is found"
-        print "Example: online.py http://www.douban.com/online/11567824/ 50980841"
+        print "Example: online.py 50980841 http://www.douban.com/online/11567824/"
         print
         sys.exit(0)
     else:
-        file = open('info.txt', 'w')
+        userid = sys.argv[1]
+        url = sys.argv[2]
+
+        # reset log file
+        online_id = get_online_id(url)
+        filename = online_id + '.txt'
+        file = open(filename, 'w')
         file.close()
-        print "*"*72
-        process(sys.argv[1], sys.argv[2])
+
+        process(online_id, userid)
 
 if __name__ == '__main__':
+    print
+    start = time.time()
     main()
+    end = time.time()
+    print "\nElapsed time: %s seconds" % str(end-start)
