@@ -20,6 +20,7 @@
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
+import urllib
 import urllib2
 import re
 from bs4 import BeautifulSoup
@@ -92,7 +93,13 @@ def process_each_page(online_id, pagesrc, eachurl, userid):
             imgurl = re.findall(
                 r'"([^"]*)"', str(urls[0]))
             imgurl = str(imgurl[0]).replace("thumb", "photo")
-            print imgurl
+            print imgurl,
+
+            # download and save the image
+            imagename = str( re.findall('p\d+', imgurl)[0] ) + '.jpg'
+            imagepath = posixpath.join(get_wkdir(online_id), imagename)
+            urllib.urlretrieve(imgurl, imagepath)
+            print ' '*4 + '... saved'
 
 
     # write the unique list into file
