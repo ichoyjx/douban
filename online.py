@@ -61,31 +61,46 @@ def process(online_id, userid):
 
      # process each result page
     for i, pagesrc in enumerate(results):
-        process_each_page(pagesrc, urls[i], userid)
+        process_each_page(online_id, pagesrc, urls[i], userid)
 
 
 # process each one
-def process_each_page(pagesrc, eachurl, userid):
+def process_each_page(online_id, pagesrc, eachurl, userid):
     # html = eachurl
     content = pagesrc
     soup = BeautifulSoup(content, "html.parser")
     org = soup.find_all(class_='photo_wrap')
 
-    file = open('info.txt', 'aw')
+    # filename = online_id + '/' + online_id + '.txt'
+    file = open(online_id + '.txt', 'aw')
     file.write('\n' + eachurl + '\n' + '-'*72 + '\n')
 
     uid_set = set()
     for photo in org:
+        # find user id
         uid = re.findall(
             r'<a href="http://www.douban.com/people/(.*?)/">', str(photo))
         uid_set.add(uid[0])
 
+        # find img link
+        if userid == str(uid[0]):
+            urls = re.findall(
+                r'src=\"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\"', \
+                str(photo))
+            imgurl = re.findall(
+                r'"([^"]*)"', str(urls[0]))
+            imgurl = str(imgurl[0]).replace("thumb", "photo")
+            print imgurl
+
+
+    # write the unique list into file
     uid_list = list(uid_set)
     for uid in uid_list:
         file.write(str(uid) + '\n')
 
     if userid in uid_list:
-        print eachurl
+        #print eachurl
+        pass
 
     file.close()
 
@@ -140,6 +155,13 @@ def get_single_page(html):
 
     return soup
 
+def print_user_name(userid):
+    html = 'http://www.douban.com/people/' + userid + '/'
+    soup = get_single_page(html)
+    node = soup.findAll('title')[0]
+    name = u''.join(node.findAll(text=True)).encode('utf-8').strip('\n')
+    print name + ' '*4 + html + '\n'
+
 # driver
 def main():
     if len(sys.argv) != 3:
@@ -160,6 +182,7 @@ def main():
         file = open(filename, 'w')
         file.close()
 
+        print_user_name(userid)
         process(online_id, userid)
 
 if __name__ == '__main__':
