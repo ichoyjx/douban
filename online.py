@@ -172,14 +172,14 @@ def print_user_name(userid):
     print name + ' '*4 + html + '\n'
 
 def get_wkdir(online_id):
-    wkdir = posixpath.join(os.getcwd(), online_id)
+    wkdir = posixpath.join(os.getcwd(), 'online-' + online_id)
     if not os.path.exists(wkdir):
         os.makedirs(wkdir)
     return wkdir
 
 def get_log_path(online_id):
     wkdir = get_wkdir(online_id)
-    filename = online_id + '.txt'
+    filename = 'online-' + online_id + '.txt'
     filepath = posixpath.join(wkdir, filename)
     return filepath
 
