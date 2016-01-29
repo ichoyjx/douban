@@ -72,8 +72,8 @@ def process(online_id, userid):
 
      # process each result page
     for i, pagesrc in enumerate(results):
+        print "\nProcessing page " + str(i)
         process_each_page(online_id, pagesrc, urls[i], userid)
-
 
 # process each one
 def process_each_page(online_id, pagesrc, eachurl, userid):
@@ -121,8 +121,6 @@ def process_each_page(online_id, pagesrc, eachurl, userid):
     if len(results) != len(download):
         print "RETRIEVE INCOMPLETE"
         sys.exit(1)
-
-    return
 
     # # write the unique list into file
     # uid_list = list(uid_set)

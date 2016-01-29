@@ -2,7 +2,7 @@
 [Main Page](https://github.com/ichoyjx/douban)
 
 ## [NOTE for 1.0 changes]
-- Search douban user's photo post within one online activity
+- ~~Search douban user's photo post within one online activity~~
 - Multithreading pool should not be too large, otherwise
 Douban will forbid your IP for a while
 
@@ -11,6 +11,15 @@ Douban will forbid your IP for a while
 - Expand to search one user's all the posts of each activity
 - Use option package
 - Add exception handling
+
+
+## [1.3.6] - 2016-01-29
+### Changed
+- Add multitheading download images
+- **TODO** you don't want to download them everytime, will need
+to add a detection to avoid downloading images everytime OR just
+let user choose to download them or not. This requires the
+options support.
 
 ## [1.3.0] - 2016-01-28
 ### Changed
