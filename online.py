@@ -36,6 +36,14 @@ def addslash(url):
     else:
         return url
 
+def retrieve_one_img(imgurl, online_id):
+    imagename = str( re.findall('p\d+', imgurl)[0] ) + '.jpg'
+    imagepath = posixpath.join(get_imgdir(online_id), imagename)
+    return urllib.urlretrieve(imgurl, imagepath)
+
+def retrieve_wrapper(args):
+    return retrieve_one_img(*args)
+
 def process(online_id, userid):
     online_url = 'http://www.douban.com/online/' + online_id + '/'
     album_url = online_url + 'album/' + get_album_id(online_id)
@@ -53,7 +61,7 @@ def process(online_id, userid):
         urls.append(phtml)
 
     # parallel fetching
-    pool = ThreadPool(6)
+    pool = ThreadPool(4)
     results = pool.map(urllib2.urlopen, urls)
     pool.close()
     pool.join()
@@ -74,11 +82,12 @@ def process_each_page(online_id, pagesrc, eachurl, userid):
     soup = BeautifulSoup(content, "html.parser")
     org = soup.find_all(class_='photo_wrap')
 
-    filename = get_log_path(online_id)
+    filename = get_json_path(online_id)
     file = open(filename, 'aw')
     file.write('\n' + eachurl + '\n' + '-'*72 + '\n')
 
     uid_set = set()
+    download = []
     for photo in org:
         # find user id
         uid = re.findall(
@@ -86,30 +95,43 @@ def process_each_page(online_id, pagesrc, eachurl, userid):
         uid_set.add(uid[0])
 
         # find img link
+        urls = re.findall(
+            r'src=\"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\"', \
+            str(photo))
+        imgurl = re.findall(
+            r'"([^"]*)"', str(urls[0]))
+        imgurl = str(imgurl[0]).replace("thumb", "photo")
+
+        # write the record
+        file.write(str(uid[0]) + ' '*2 + imgurl + '\n')
+
+        # note here it's a tuple
+        download.append( (imgurl, online_id) )
+
         if userid == str(uid[0]):
-            urls = re.findall(
-                r'src=\"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\"', \
-                str(photo))
-            imgurl = re.findall(
-                r'"([^"]*)"', str(urls[0]))
-            imgurl = str(imgurl[0]).replace("thumb", "photo")
-            print imgurl,
-
             # download and save the image
-            imagename = str( re.findall('p\d+', imgurl)[0] ) + '.jpg'
-            imagepath = posixpath.join(get_wkdir(online_id), imagename)
-            urllib.urlretrieve(imgurl, imagepath)
-            print ' '*4 + '... saved'
+            print imgurl
 
+            # print ' '*2 + '... saved'
+    pool = ThreadPool(4)
+    results = pool.map(retrieve_wrapper, download)
+    pool.close()
+    pool.join()
 
-    # write the unique list into file
-    uid_list = list(uid_set)
-    for uid in uid_list:
-        file.write(str(uid) + '\n')
+    if len(results) != len(download):
+        print "RETRIEVE INCOMPLETE"
+        sys.exit(1)
 
-    if userid in uid_list:
-        #print eachurl
-        pass
+    return
+
+    # # write the unique list into file
+    # uid_list = list(uid_set)
+    # for uid in uid_list:
+    #     file.write(str(uid) + '\n')
+
+    # if userid in uid_list:
+    #     #print eachurl
+    #     pass
 
     file.close()
 
@@ -169,7 +191,7 @@ def print_user_name(userid):
     soup = get_single_page(html)
     node = soup.findAll('title')[0]
     name = u''.join(node.findAll(text=True)).encode('utf-8').strip('\n')
-    print name + ' '*4 + html + '\n'
+    print name + ' '*2 + html + '\n'
 
 def get_wkdir(online_id):
     wkdir = posixpath.join(os.getcwd(), 'online-' + online_id)
@@ -177,9 +199,15 @@ def get_wkdir(online_id):
         os.makedirs(wkdir)
     return wkdir
 
-def get_log_path(online_id):
+def get_imgdir(online_id):
+    imgdir = posixpath.join(get_wkdir(online_id), 'images')
+    if not os.path.exists(imgdir):
+        os.makedirs(imgdir)
+    return imgdir
+
+def get_json_path(online_id):
     wkdir = get_wkdir(online_id)
-    filename = 'online-' + online_id + '.txt'
+    filename = 'online-' + online_id + '.json'
     filepath = posixpath.join(wkdir, filename)
     return filepath
 
@@ -188,7 +216,7 @@ def main():
     if len(sys.argv) != 3:
         print "Usage: online.py userid online_url"
         print "Output:"
-        print "     - info.txt"
+        print "     - info.json"
         print "     - page url if userid is found"
         print "Example: online.py 50980841 http://www.douban.com/online/11567824/"
         print
@@ -199,7 +227,7 @@ def main():
 
         # reset log file
         online_id = get_online_id(url)
-        filepath = get_log_path(online_id)
+        filepath = get_json_path(online_id)
         file = open(filepath, 'w')
         file.close()
 
