@@ -29,7 +29,79 @@ from multiprocessing import cpu_count
 import time
 import os
 import posixpath
+import argparse
 
+# some print utils, move to a new file in the future
+def printerr(msg):
+    print "%8s:  %s" % ('ERROR', msg)
+
+def printwarn(msg):
+    print "%8s:  %s" % ('WARNING', msg)
+
+def printfail(msg):
+    print "%8s:  %s" % ('FAIL', msg)
+
+def printinfo(msg, info='INFO'):
+    print "%8s:  %s" % (info, msg)
+
+def printbar():
+    print '-' * 72
+
+def report_and_exit(num):
+    #printbar()
+    sys.exit(num)
+
+# args
+def get_options_parser():
+    aut_parser = argparse.ArgumentParser(
+        description='Douban Online Analyzer: 1.0',
+        epilog="Example: python online.py -user 53907177 -online 122845047",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        add_help=False
+    )
+
+    # required group
+    req_args = aut_parser.add_argument_group('required arguments')
+
+    # optional group
+    opt_args = aut_parser.add_argument_group('optional arguments')
+
+    req_args.add_argument(
+        '-user',
+        help='douban user id (not nickname)',
+        required=True,
+        default=argparse.SUPPRESS
+    )
+    req_args.add_argument(
+        '-online',
+        help="""douban online activity id (11567824)
+                http://www.douban.com/online/11567824
+             """,
+        required=True,
+        default=argparse.SUPPRESS
+    )
+    opt_args.add_argument(
+        '-h',
+        action="help",
+        help='show this help message and exit'
+    )
+    opt_args.add_argument(
+        '-save',
+        help='save the images',
+        action='store_true',
+        default=argparse.SUPPRESS
+    )
+    opt_args.add_argument(
+        '-update',
+        help='update the list and files',
+        action='store_true',
+        default=argparse.SUPPRESS
+    )
+
+    return aut_parser
+
+
+# some libs
 def addslash(url):
     if not url.endswith('/'):
         return url + '/'
@@ -70,9 +142,9 @@ def process(online_id, userid):
         print "FETCH INCOMPLETE"
         sys.exit(1)
 
-     # process each result page
+    # process each result page
     for i, pagesrc in enumerate(results):
-        print "\nProcessing page " + str(i)
+        #print "Processing page " + str(i)
         process_each_page(online_id, pagesrc, urls[i], userid)
 
 # process each one
@@ -113,6 +185,7 @@ def process_each_page(online_id, pagesrc, eachurl, userid):
             print imgurl
 
             # print ' '*2 + '... saved'
+    '''
     pool = ThreadPool(4)
     results = pool.map(retrieve_wrapper, download)
     pool.close()
@@ -121,6 +194,7 @@ def process_each_page(online_id, pagesrc, eachurl, userid):
     if len(results) != len(download):
         print "RETRIEVE INCOMPLETE"
         sys.exit(1)
+    '''
 
     # # write the unique list into file
     # uid_list = list(uid_set)
@@ -185,11 +259,16 @@ def get_single_page(html):
     return soup
 
 def print_user_name(userid):
-    html = 'http://www.douban.com/people/' + userid + '/'
+    html = 'http://www.douban.com/people/' + userid
     soup = get_single_page(html)
     node = soup.findAll('title')[0]
     name = u''.join(node.findAll(text=True)).encode('utf-8').strip('\n')
-    print name + ' '*2 + html + '\n'
+
+    # you may do not have access to user's main page
+    if name == u'\u767B\u5F55\u8C46\u74E3':
+        print html + '\n'
+    else:
+        print name + ' '*2 + html + '\n'
 
 def get_wkdir(online_id):
     wkdir = posixpath.join(os.getcwd(), 'online-' + online_id)
@@ -205,33 +284,33 @@ def get_imgdir(online_id):
 
 def get_json_path(online_id):
     wkdir = get_wkdir(online_id)
-    filename = 'online-' + online_id + '.json'
+    filename = 'online-' + online_id + '.js'
     filepath = posixpath.join(wkdir, filename)
     return filepath
 
 # driver
 def main():
-    if len(sys.argv) != 3:
-        print "Usage: online.py userid online_url"
-        print "Output:"
-        print "     - info.json"
-        print "     - page url if userid is found"
-        print "Example: online.py 50980841 http://www.douban.com/online/11567824/"
-        print
-        sys.exit(0)
-    else:
-        userid = sys.argv[1]
-        url = sys.argv[2]
+    parser = get_options_parser()
+    if len(sys.argv) < 2:
+        parser.print_help()
+        report_and_exit(-1)
 
-        # reset log file
-        online_id = get_online_id(url)
+    args = parser.parse_args()
+    userid = vars(args).get('user')
+    online_id = vars(args).get('online')
+    update = vars(args).get('update')
+    save = vars(args).get('save')
+
+    if update:
+        # touch the file
         filepath = get_json_path(online_id)
         file = open(filepath, 'w')
         file.close()
 
-        print_user_name(userid)
-        process(online_id, userid)
+    print_user_name(userid)
+    process(online_id, userid)
 
+    if save:
         print "\nImages are saved in %s" % get_wkdir(online_id)
 
 if __name__ == '__main__':
