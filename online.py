@@ -178,30 +178,36 @@ def process(online_id, userid):
         print "FETCH INCOMPLETE"
         sys.exit(1)
 
-    # process each result page
+    # parse each result page but will process them all later
+    org_all = []
     for i, pagesrc in enumerate(results):
         #print "Processing page " + str(i)
-        process_each_page(online_id, pagesrc, urls[i], userid)
+        soup = BeautifulSoup(pagesrc, "html.parser")
+        org = soup.find_all(class_='photo_wrap')
+        org_all += org
+
+    process_all(online_id, org_all, userid)
 
 # process each one
-def process_each_page(online_id, pagesrc, eachurl, userid):
+def process_all(online_id, org, userid):
     # html = eachurl
-    content = pagesrc
-    soup = BeautifulSoup(content, "html.parser")
-    org = soup.find_all(class_='photo_wrap')
+    # content = pagesrc
 
     filename = get_json_path(online_id)
-    file = open(filename, 'aw')
-    file.write('\n' + eachurl + '\n' + '-'*72 + '\n')
+    #file = open(filename, 'aw')
+    # file.write('\n' + eachurl + '\n' + '-'*72 + '\n')
 
     uid_set = set()
     download = []
-    for photo in org:
-        # find user id
-        uid = re.findall(
-            r'<a href="http://www.douban.com/people/(.*?)/">', str(photo))
-        uid_set.add(uid[0])
 
+    # entire js file
+    json_obj = {}
+    # all the info for a user
+    user_obj = {}
+
+    # each processing block is a photo
+    photo_obj = {}
+    for i, photo in enumerate(org):
         # find img link
         urls = re.findall(
             r'src=\"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\"', \
@@ -210,8 +216,34 @@ def process_each_page(online_id, pagesrc, eachurl, userid):
             r'"([^"]*)"', str(urls[0]))
         imgurl = str(imgurl[0]).replace("thumb", "photo")
 
+        # update photo_obj with photoid
+        photoid = str( re.findall('p\d+', imgurl)[0] )
+        photo_obj['id'] = photoid
+
+        # update photo_obj with imgurl
+        photo_obj['url'] = imgurl
+
+        # find user id and update photo_obj
+        uid = re.findall(
+            r'<a href="http://www.douban.com/people/(.*?)/">', str(photo))
+        uid_set.add(uid[0])
+        photo_obj['userid'] = uid[0]
+
+        # find the comments number and update photo_obj
+        comment = re.findall(
+            r'#comments\">(.*?)</a>', str(photo))
+        comment_str = u''.join(comment).encode('utf-8')
+        if comment:
+            ncomment = re.findall(
+                r'\d+', comment_str)
+            photo_obj['comments'] = str(ncomment[0])
+
+
+        # add an entry into the json file with photoid
+        json_obj[photoid] = photo_obj
+
         # write the record
-        file.write(str(uid[0]) + ' '*2 + imgurl + '\n')
+        #file.write(str(uid[0]) + ' '*2 + imgurl + '\n')
 
         # note here it's a tuple
         download.append( (imgurl, online_id) )
@@ -220,7 +252,6 @@ def process_each_page(online_id, pagesrc, eachurl, userid):
             # download and save the image
             print imgurl
 
-            # print ' '*2 + '... saved'
     '''
     pool = ThreadPool(4)
     results = pool.map(retrieve_wrapper, download)
@@ -232,16 +263,10 @@ def process_each_page(online_id, pagesrc, eachurl, userid):
         sys.exit(1)
     '''
 
-    # # write the unique list into file
-    # uid_list = list(uid_set)
-    # for uid in uid_list:
-    #     file.write(str(uid) + '\n')
+    with open(filename, 'w') as f:
+        json.dump(json_obj, f)
 
-    # if userid in uid_list:
-    #     #print eachurl
-    #     pass
-
-    file.close()
+    f.close()
 
 # get the total number of photos
 def get_total(album_url):
