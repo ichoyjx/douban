@@ -416,10 +416,10 @@ def main():
     top = vars(args).get('top')
 
     # be nice
-    #print_user_name(userid)
+    print_user_name(userid)
 
     filepath = get_json_path(online_id)
-    if update:
+    if update or not is_json_exist(online_id):
         # touch the file
         file = open(filepath, 'w')
         file.close()
