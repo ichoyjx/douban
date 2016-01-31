@@ -45,11 +45,47 @@ def printinfo(msg, info='INFO'):
     print "%8s:  %s" % (info, msg)
 
 def printbar():
-    print '-' * 72
+    print '*' * 72
 
 def report_and_exit(num):
     #printbar()
     sys.exit(num)
+
+#
+# json related utils
+#
+"""
+json file structure
+{
+  online_info : {
+    urls : ['http://url_0',
+            'http://url_1',
+            ...
+           ]
+    processed_urls : ['http://url_0',
+                      'http://url_6',
+                      ...
+                     ]
+  }
+
+  page_0: {
+    url : 'http://url_0'
+    user_list: [ '12345678', '23456789', '34567890' ... ]
+    user_0 : {}
+  }
+  ...
+  page_40: {
+    url : 'http://url_40'
+    user_list: [ '12345678', '23423659', '97565690' ... ]
+  }
+}
+"""
+def get_json_path(online_id):
+    wkdir = get_wkdir(online_id)
+    filename = 'online-' + online_id + '.js'
+    filepath = posixpath.join(wkdir, filename)
+    return filepath
+
 
 # args
 def get_options_parser():
@@ -281,12 +317,6 @@ def get_imgdir(online_id):
     if not os.path.exists(imgdir):
         os.makedirs(imgdir)
     return imgdir
-
-def get_json_path(online_id):
-    wkdir = get_wkdir(online_id)
-    filename = 'online-' + online_id + '.js'
-    filepath = posixpath.join(wkdir, filename)
-    return filepath
 
 # driver
 def main():
