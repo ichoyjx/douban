@@ -7,6 +7,6 @@ You need to install bs4:
     pip install BeautifulSoup4
 
 ## Usage
-online page and user id in douban
+user id in douban and online page id
 
-    python online.py 50980841 http://www.douban.com/online/11567824/
+    python online.py -user 50980841 -online 11567824

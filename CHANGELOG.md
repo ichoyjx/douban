@@ -9,9 +9,12 @@ Douban will forbid your IP for a while
 ## [TODO]
 - ~~Add parallel fetching the pages~~
 - Expand to search one user's all the posts of each activity
-- Use option package
+- ~~Use option package~~
 - Add exception handling
 
+## [1.3.8] - 2016-01-30
+### Changed
+- Add options using argparse, probably needs more
 
 ## [1.3.6] - 2016-01-29
 ### Changed
