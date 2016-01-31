@@ -215,7 +215,7 @@ def process(online_id, userid):
 
     # 90 is douban's default
     urls = []
-    for page in range(0, total-1, 90):
+    for page in range(0, total, 90):
         pid = str(page)
         appstr = '?start=%s&sortby=time' % pid
         phtml = addslash(album_url) + appstr
@@ -297,6 +297,7 @@ def process_all(online_id, org, userid):
         # add an entry into the json file with photoid
         json_obj[photoid] = photo_obj
         photo_obj = {}
+
 
         # write the record
         #file.write(str(uid[0]) + ' '*2 + imgurl + '\n')
