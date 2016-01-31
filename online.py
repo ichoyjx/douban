@@ -30,6 +30,8 @@ import time
 import os
 import posixpath
 import argparse
+import json
+import collections
 
 # some print utils, move to a new file in the future
 def printerr(msg):
@@ -86,6 +88,50 @@ def get_json_path(online_id):
     filepath = posixpath.join(wkdir, filename)
     return filepath
 
+# True: exists and not size 0
+def is_non_zero_file(fpath):
+    return True if os.path.isfile(fpath) and \
+        os.path.getsize(fpath) > 0 \
+        else False
+
+def is_json_exist(online_id):
+    filename = get_json_path(online_id)
+    return is_non_zero_file(filename)
+
+def json_test(fpath, userid, top):
+    with open(fpath, 'r') as f:
+        json_obj = json.load(f)
+
+    unsorted_list = []
+    for photo in json_obj.keys():
+        user_id = json_obj[photo]['userid']
+        photo_url = json_obj[photo]['url']
+        photo_id = json_obj[photo]['id']
+        num_comments = json_obj[photo]['comments']
+
+        if userid == user_id:
+            print photo_url
+
+        unsorted_list.append( (photo_id, int(num_comments)) )
+
+    sorted_list = sorted(unsorted_list, key=lambda x:x[1], reverse=True)
+
+    # get top #
+    ntop = top
+    if len(sorted_list) <= top:
+        top_list = sorted_list
+        ntop = len(sorted_list)
+    else:
+        top_list = sorted_list[:ntop]
+
+    print
+    printbar()
+    print "TOP %s" % repr(ntop)
+    printbar()
+
+    for each in top_list:
+        print json_obj[each[0]]['url'] + '   #' + json_obj[each[0]]['comments']
+
 
 # args
 def get_options_parser():
@@ -120,6 +166,13 @@ def get_options_parser():
         '-h',
         action="help",
         help='show this help message and exit'
+    )
+    opt_args.add_argument(
+        '-top',
+        help='Top # images based on comments',
+        type=int,
+        default=10,
+        choices=[10, 20, 30, 50, 60, 100]
     )
     opt_args.add_argument(
         '-save',
@@ -233,14 +286,17 @@ def process_all(online_id, org, userid):
         comment = re.findall(
             r'#comments\">(.*?)</a>', str(photo))
         comment_str = u''.join(comment).encode('utf-8')
+        ncomment = 0
         if comment:
             ncomment = re.findall(
                 r'\d+', comment_str)
             photo_obj['comments'] = str(ncomment[0])
-
+        else:
+            photo_obj['comments'] = str(ncomment)
 
         # add an entry into the json file with photoid
         json_obj[photoid] = photo_obj
+        photo_obj = {}
 
         # write the record
         #file.write(str(uid[0]) + ' '*2 + imgurl + '\n')
@@ -250,7 +306,8 @@ def process_all(online_id, org, userid):
 
         if userid == str(uid[0]):
             # download and save the image
-            print imgurl
+            # print imgurl
+            pass
 
     '''
     pool = ThreadPool(4)
@@ -355,15 +412,21 @@ def main():
     online_id = vars(args).get('online')
     update = vars(args).get('update')
     save = vars(args).get('save')
+    top = vars(args).get('top')
 
+    # be nice
+    #print_user_name(userid)
+
+    filepath = get_json_path(online_id)
     if update:
         # touch the file
-        filepath = get_json_path(online_id)
         file = open(filepath, 'w')
         file.close()
+        process(online_id, userid)
 
-    print_user_name(userid)
-    process(online_id, userid)
+    # if not update, directly check
+    if is_json_exist(online_id):
+        json_test(filepath, userid, top)
 
     if save:
         print "\nImages are saved in %s" % get_wkdir(online_id)
