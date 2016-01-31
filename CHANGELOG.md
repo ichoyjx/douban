@@ -12,6 +12,19 @@ Douban will forbid your IP for a while
 - ~~Use option package~~
 - Add exception handling
 
+## [1.4.5] - 2016-01-31
+### Changed
+- Re-structure how to process the photo-wrap: get all the pages
+and add them together, then process the entire object to find
+the photo-wrap
+- Add top option to return the TOP #top images based on the number
+of comments
+- Add real json format to the project, this will change the way
+how we access the photo info and would be easy to do the local
+search. For example, the default search method is to check the
+existence of json file; it will only recreate the json file if
+the -update is present
+
 ## [1.3.8] - 2016-01-30
 ### Changed
 - Add options using argparse, probably needs more
