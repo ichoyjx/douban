@@ -35,16 +35,16 @@ import collections
 
 # some print utils, move to a new file in the future
 def printerr(msg):
-    print "%8s:  %s" % ('ERROR', msg)
+    print "%-8s:  %s\n" % ('ERROR', msg)
 
 def printwarn(msg):
-    print "%8s:  %s" % ('WARNING', msg)
+    print "%-8s:  %s\n" % ('WARNING', msg)
 
 def printfail(msg):
-    print "%8s:  %s" % ('FAIL', msg)
+    print "%-8s:  %s\n" % ('FAIL', msg)
 
 def printinfo(msg, info='INFO'):
-    print "%8s:  %s" % (info, msg)
+    print "%-8s:  %s\n" % (info, msg)
 
 def printbar():
     print '*' * 72
@@ -134,10 +134,19 @@ def json_test(fpath, userid, top):
 
 
 # args
+def check_options(args):
+    userid = vars(args).get('user')
+    online_id = vars(args).get('online')
+
+    if not userid and not online_id:
+        return False
+
+    return True
+
 def get_options_parser():
     aut_parser = argparse.ArgumentParser(
-        description='Douban Online Analyzer: 1.0',
-        epilog="Example: python online.py -user 53907177 -online 122845047",
+        description="douban online analyzer: 1.0",
+        epilog="example: python online.py -user 53907177 -online 122845047",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         add_help=False
     )
@@ -148,18 +157,26 @@ def get_options_parser():
     # optional group
     opt_args = aut_parser.add_argument_group('optional arguments')
 
-    req_args.add_argument(
+    opt_args.add_argument(
         '-user',
-        help='douban user id (not nickname)',
-        required=True,
+        help="""douban user id (not nickname)
+                If no user id specified, will search the top #
+                images of the given online id.
+
+                (user id and online id, at least one of them
+                 must be present on the command line)
+             """,
+        #required=True,
         default=argparse.SUPPRESS
     )
-    req_args.add_argument(
+    opt_args.add_argument(
         '-online',
         help="""douban online activity id (11567824)
                 http://www.douban.com/online/11567824
+
+                If no online id specified, will search all the
+                online activities' images.
              """,
-        required=True,
         default=argparse.SUPPRESS
     )
     opt_args.add_argument(
@@ -172,7 +189,7 @@ def get_options_parser():
         help='Top # images based on comments',
         type=int,
         default=10,
-        choices=[10, 20, 30, 50, 60, 100]
+        choices=[10, 20, 50, 100]
     )
     opt_args.add_argument(
         '-save',
@@ -404,11 +421,17 @@ def get_imgdir(online_id):
 # driver
 def main():
     parser = get_options_parser()
-    if len(sys.argv) < 2:
+    # userid or online_id must be present one of them
+    if len(sys.argv) < 3:
         parser.print_help()
         report_and_exit(-1)
 
     args = parser.parse_args()
+    if not check_options(args):
+        printerr ('you need to specify -userid or -onlineid')
+        parser.print_help()
+        report_and_exit(-1)
+
     userid = vars(args).get('user')
     online_id = vars(args).get('online')
     update = vars(args).get('update')
