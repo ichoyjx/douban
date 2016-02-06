@@ -222,7 +222,7 @@ def retrieve_one_img(imgurl, online_id):
 def retrieve_wrapper(args):
     return retrieve_one_img(*args)
 
-def process(online_id, userid):
+def process(online_id, userid, save):
     online_url = 'http://www.douban.com/online/' + online_id + '/'
     album_url = online_url + 'album/' + get_album_id(online_id)
 
@@ -239,7 +239,7 @@ def process(online_id, userid):
         urls.append(phtml)
 
     # parallel fetching
-    pool = ThreadPool(4)
+    pool = ThreadPool(cpu_count())
     results = pool.map(urllib2.urlopen, urls)
     pool.close()
     pool.join()
@@ -248,7 +248,7 @@ def process(online_id, userid):
         print "FETCH INCOMPLETE"
         sys.exit(1)
 
-    # parse each result page but will process them all later
+    # parse each result page but will process them all together later
     org_all = []
     for i, pagesrc in enumerate(results):
         #print "Processing page " + str(i)
@@ -256,13 +256,10 @@ def process(online_id, userid):
         org = soup.find_all(class_='photo_wrap')
         org_all += org
 
-    process_all(online_id, org_all, userid)
+    process_all(online_id, org_all, userid, save)
 
 # process each one
-def process_all(online_id, org, userid):
-    # html = eachurl
-    # content = pagesrc
-
+def process_all(online_id, org, userid, save):
     filename = get_json_path(online_id)
     #file = open(filename, 'aw')
     # file.write('\n' + eachurl + '\n' + '-'*72 + '\n')
@@ -270,12 +267,19 @@ def process_all(online_id, org, userid):
     uid_set = set()
     download = []
 
+    #
+    # first step, get all the objects
+    #
+
     # entire js file
     json_obj = {}
     # all the info for a user
     user_obj = {}
+    # all the online photo page url
+    imgonline_url = []
 
     # each processing block is a photo
+    # also update the js block here
     photo_obj = {}
     for i, photo in enumerate(org):
         # find img link
@@ -287,8 +291,13 @@ def process_all(online_id, org, userid):
         imgurl = str(imgurl[0]).replace("thumb", "photo")
 
         # update photo_obj with photoid
-        photoid = str( re.findall('p\d+', imgurl)[0] )
+        photoid = str( re.findall(r'p\d+', imgurl)[0] )
+        photoid = str( re.findall(r'\d+', photoid)[0] )
         photo_obj['id'] = photoid
+
+        imgourl = 'http://www.douban.com/online/' + \
+                  online_id + '/photo/' + photoid
+        imgonline_url.append(imgourl)
 
         # update photo_obj with imgurl
         photo_obj['url'] = imgurl
@@ -315,6 +324,10 @@ def process_all(online_id, org, userid):
         json_obj[photoid] = photo_obj
         photo_obj = {}
 
+        # save it for downloading?
+        photo_obj['save'] = 0
+        if save:
+            photo_obj['save'] = 1
 
         # write the record
         #file.write(str(uid[0]) + ' '*2 + imgurl + '\n')
@@ -327,8 +340,25 @@ def process_all(online_id, org, userid):
             # print imgurl
             pass
 
+
+    #
+    # second part, process each photos online page
+    # imgonlineurl
+    #
+    pool = ThreadPool(cpu_count())
+    results = pool.map(urllib2.urlopen, imgonline_url)
+    pool.close()
+    pool.join()
+
+    if len(results) != len(imgonline_url):
+        print "FETCH photo page INCOMPLETE"
+        sys.exit(1)
+
+    #
+    # download the images if -save is present
+    #
     '''
-    pool = ThreadPool(4)
+    pool = ThreadPool(cpu_count())
     results = pool.map(retrieve_wrapper, download)
     pool.close()
     pool.join()
@@ -446,7 +476,7 @@ def main():
         # touch the file
         file = open(filepath, 'w')
         file.close()
-        process(online_id, userid)
+        process(online_id, userid, save)
 
     # if not update, directly check
     if is_json_exist(online_id):
