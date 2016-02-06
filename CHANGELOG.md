@@ -12,6 +12,15 @@ Douban will forbid your IP for a while
 - ~~Use option package~~
 - Add exception handling
 
+## [1.4.6] - 2016-02-05
+### Changed
+- -user and -online are not required now, but user has to provide
+at least one of them. If -user is provided only, then it will search
+all the photoes for all the activities that user attended; if
+-online is providedly only, it will print out the top # images
+of this activity; if both of them are present, then search this
+user's photos in this activity and also print out the top #.
+
 ## [1.4.5] - 2016-01-31
 ### Changed
 - Re-structure how to process the photo-wrap: get all the pages
