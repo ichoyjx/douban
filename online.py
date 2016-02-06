@@ -295,10 +295,6 @@ def process_all(online_id, org, userid, save):
         photoid = str( re.findall(r'\d+', photoid)[0] )
         photo_obj['id'] = photoid
 
-        imgourl = 'http://www.douban.com/online/' + \
-                  online_id + '/photo/' + photoid
-        imgonline_url.append(imgourl)
-
         # update photo_obj with imgurl
         photo_obj['url'] = imgurl
 
@@ -319,6 +315,11 @@ def process_all(online_id, org, userid, save):
             photo_obj['comments'] = str(ncomment[0])
         else:
             photo_obj['comments'] = str(ncomment)
+
+        if int(ncomment) > 0:
+            imgourl = 'http://www.douban.com/online/' + \
+                      online_id + '/photo/' + photoid
+            imgonline_url.append(imgourl)
 
         # add an entry into the json file with photoid
         json_obj[photoid] = photo_obj
