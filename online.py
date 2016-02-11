@@ -346,6 +346,7 @@ def process_all(online_id, org, userid, save):
     # second part, process each photos online page
     # imgonlineurl
     #
+    '''
     pool = ThreadPool(cpu_count())
     results = pool.map(urllib2.urlopen, imgonline_url)
     pool.close()
@@ -354,6 +355,7 @@ def process_all(online_id, org, userid, save):
     if len(results) != len(imgonline_url):
         print "FETCH photo page INCOMPLETE"
         sys.exit(1)
+    '''
 
     #
     # download the images if -save is present
