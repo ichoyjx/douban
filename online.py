@@ -367,7 +367,6 @@ def process_all(online_id, org, userid, save):
     imgonline_url = []
 
     print '\nAverage Comments: %s' %  repr(avg_comment)
-    print '\nTotal Pages: %s' % repr(len(imgonline_info))
     printbar()
     for image in imgonline_info:
         if (image[1] > avg_comment):
@@ -375,6 +374,7 @@ def process_all(online_id, org, userid, save):
 
             print image[0] + '  ... #' + str(image[1])
     printbar()
+    print '\nTotal Pages: %s' % repr(len(imgonline_url))
 
     #
     # second part, process each photos online page
