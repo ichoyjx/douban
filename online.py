@@ -33,6 +33,11 @@ import argparse
 import json
 import collections
 
+#
+# globals, I am gonna get rid of them
+#
+POOL_SIZE = 8
+
 # some print utils, move to a new file in the future
 def printerr(msg):
     print "%-8s:  %s\n" % ('ERROR', msg)
@@ -239,7 +244,7 @@ def process(online_id, userid, save):
         urls.append(phtml)
 
     # parallel fetching
-    pool = ThreadPool(cpu_count())
+    pool = ThreadPool(POOL_SIZE)
     results = pool.map(urllib2.urlopen, urls)
     pool.close()
     pool.join()
@@ -275,8 +280,10 @@ def process_all(online_id, org, userid, save):
     json_obj = {}
     # all the info for a user
     user_obj = {}
-    # all the online photo page url
-    imgonline_url = []
+    # all the online photo page url and # of comments
+    imgonline_info = []
+    # total number of comments
+    total_comments = 0
 
     # each processing block is a photo
     # also update the js block here
@@ -313,13 +320,25 @@ def process_all(online_id, org, userid, save):
             ncomment = re.findall(
                 r'\d+', comment_str)
             photo_obj['comments'] = str(ncomment[0])
+
+            #
+            # OK, I am applying restrictions here, because
+            # the total number of images can be 1000+ and it
+            # won't be a good idea to request all these pages.
+            #
+            # So, two rules:
+            #   - set up a threshold to fetch or not (cont'd)
+            #   - if yes, only when ncomment > avg(ncomments)
+            #
+            ncomm = int(ncomment[0])
+            if ncomm > 0:
+                imgourl = 'http://www.douban.com/online/' + \
+                          online_id + '/photo/' + photoid
+                imgonline_info.append( (imgourl,ncomm) )
+
+                total_comments += ncomm
         else:
             photo_obj['comments'] = str(ncomment)
-
-        if int(ncomment) > 0:
-            imgourl = 'http://www.douban.com/online/' + \
-                      online_id + '/photo/' + photoid
-            imgonline_url.append(imgourl)
 
         # add an entry into the json file with photoid
         json_obj[photoid] = photo_obj
@@ -341,12 +360,28 @@ def process_all(online_id, org, userid, save):
             # print imgurl
             pass
 
+        # end of for
+
+    # decide the image pages that we are gonna fetch
+    avg_comment = int ( total_comments / len(imgonline_info) )
+    imgonline_url = []
+
+    print '\nAverage Comments: %s' %  repr(avg_comment)
+    print '\nTotal Pages: %s' % repr(len(imgonline_info))
+    printbar()
+    for image in imgonline_info:
+        if (image[1] > avg_comment):
+            imgonline_url.append(image[0])
+
+            print image[0] + '  ... #' + str(image[1])
+    printbar()
 
     #
     # second part, process each photos online page
     # imgonlineurl
     #
-    pool = ThreadPool(cpu_count())
+    """
+    pool = ThreadPool(POOL_SIZE)
     results = pool.map(urllib2.urlopen, imgonline_url)
     pool.close()
     pool.join()
@@ -354,12 +389,13 @@ def process_all(online_id, org, userid, save):
     if len(results) != len(imgonline_url):
         print "FETCH photo page INCOMPLETE"
         sys.exit(1)
+    """
 
     #
     # download the images if -save is present
     #
     '''
-    pool = ThreadPool(cpu_count())
+    pool = ThreadPool(POOL_SIZE)
     results = pool.map(retrieve_wrapper, download)
     pool.close()
     pool.join()
