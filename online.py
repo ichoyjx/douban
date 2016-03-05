@@ -284,6 +284,7 @@ def process_all(online_id, org, userid, save):
     imgonline_info = []
     # total number of comments
     total_comments = 0
+    max_ncomment = 0
 
     # each processing block is a photo
     # also update the js block here
@@ -331,6 +332,8 @@ def process_all(online_id, org, userid, save):
             #   - if yes, only when ncomment > avg(ncomments)
             #
             ncomm = int(ncomment[0])
+            if ncomm > max_ncomment:
+                max_ncomment = ncomm
             if ncomm > 0:
                 imgourl = 'http://www.douban.com/online/' + \
                           online_id + '/photo/' + photoid
@@ -364,12 +367,15 @@ def process_all(online_id, org, userid, save):
 
     # decide the image pages that we are gonna fetch
     avg_comment = int ( total_comments / len(imgonline_info) )
+    thres_comment = int ( (max_ncomment - avg_comment) / 2 )
     imgonline_url = []
 
-    print '\nAverage Comments: %s' %  repr(avg_comment)
+    print '\n  Average Comments: %s' %  repr(avg_comment)
+    print 'Threshold Comments: %s' %  repr(thres_comment)
+
     printbar()
     for image in imgonline_info:
-        if (image[1] > avg_comment):
+        if (image[1] > thres_comment):
             imgonline_url.append(image[0])
 
             print image[0] + '  ... #' + str(image[1])
